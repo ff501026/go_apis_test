@@ -1,0 +1,48 @@
+image: golang:1.17
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Authority build and pack
+          script:
+            - apt-get update && apt-get install -y zip
+            - mkdir deploy
+            - GOOS=linux GOARCH=amd64 go build -o deploy/authority cmd/lambda/authority.go
+            - zip -D -j -r deploy/authority.zip deploy/authority
+          artifacts:
+            - deploy/authority.zip
+      - step:
+          name: Authority upload to lambda
+          deployment: Production
+          script:
+            - pipe: atlassian/aws-lambda-deploy:1.2.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                FUNCTION_NAME: $FUNCTION_NAME
+                COMMAND: 'update'
+                ZIP_FILE: 'deploy/authority.zip'
+    develop:
+      - step:
+          name: Authority build and pack
+          script:
+            - apt-get update && apt-get install -y zip
+            - mkdir deploy
+            - GOOS=linux GOARCH=amd64 go build -o deploy/authority cmd/lambda/authority.go
+            - zip -D -j -r deploy/authority.zip deploy/authority
+          artifacts:
+            - deploy/authority.zip
+      - step:
+          name: Authority upload to lambda
+          deployment: Test
+          script:
+            - pipe: atlassian/aws-lambda-deploy:1.2.0
+              variables:
+                AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+                AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+                AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+                FUNCTION_NAME: $FUNCTION_NAME
+                COMMAND: 'update'
+                ZIP_FILE: 'deploy/authority.zip'
